@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from src.patient_encounter_system.database import SessionLocal
 from src.patient_encounter_system.models.patient import Patient
@@ -15,8 +15,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
 
 
 @router.post(
@@ -39,7 +37,6 @@ def create_patient(data: PatientCreate, db: Session = Depends(get_db)):
 
     db.refresh(patient)
     return patient
-
 
 
 @router.get(

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from src.patient_encounter_system.database import create_tables
-from src.patient_encounter_system.routes import patients, doctors, appointments
+from src.patient_encounter_system.routes import appointments, doctors, patients
 
 app = FastAPI(title="Medical Encounter Management System")
 

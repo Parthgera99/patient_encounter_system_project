@@ -1,9 +1,9 @@
 from sqlalchemy import (
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     func,
-    Index,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -42,6 +42,4 @@ class Appointment(Base):
         nullable=False,
     )
 
-    __table_args__ = (
-        Index("ix_appointments_doctor_start", "doctor_id", "start_time"),
-    )
+    __table_args__ = (Index("ix_appointments_doctor_start", "doctor_id", "start_time"),)

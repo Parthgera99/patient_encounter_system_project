@@ -1,8 +1,11 @@
+from datetime import date, datetime, time
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
-from src.patient_encounter_system.models.appointment import Appointment
 from src.patient_encounter_system.database import SessionLocal
+from src.patient_encounter_system.models.appointment import Appointment
 from src.patient_encounter_system.schemas.appointment import (
     AppointmentCreate,
     AppointmentRead,
@@ -34,13 +37,11 @@ def schedule_appointment(
     try:
         return create_appointment(db, data)
     except ValueError as e:
-        message = str(e)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e),
+        )
 
-        if "overlap" in message.lower() or "duplicate" in message.lower():
-            raise HTTPException(status_code=409, detail=message)
-
-        raise HTTPException(status_code=400, detail=message)
-    
 
 @router.get(
     "/{appointment_id}",
@@ -61,3 +62,35 @@ def get_appointment_by_id(
 
     return appointment
 
+
+@router.get(
+    "",
+    response_model=list[AppointmentRead],
+    status_code=status.HTTP_200_OK,
+)
+def get_appointments_by_date(
+    appointment_date: date,
+    doctor_id: int | None = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Get all appointments for a given date.
+    Optionally filter by doctor_id.
+    """
+
+    start_dt = datetime.combine(appointment_date, time.min)
+    end_dt = datetime.combine(appointment_date, time.max)
+
+    conditions = [
+        Appointment.start_time >= start_dt,
+        Appointment.start_time <= end_dt,
+    ]
+
+    if doctor_id is not None:
+        conditions.append(Appointment.doctor_id == doctor_id)
+
+    stmt = select(Appointment).where(and_(*conditions))
+
+    appointments = db.execute(stmt).scalars().all()
+
+    return appointments

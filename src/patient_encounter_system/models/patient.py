@@ -1,4 +1,4 @@
-from sqlalchemy import String, DateTime, func
+from sqlalchemy import DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.patient_encounter_system.database import Base
@@ -9,13 +9,9 @@ class Patient(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    first_name: Mapped[str] = mapped_column(
-        "firstName", String(100), nullable=False
-    )
+    first_name: Mapped[str] = mapped_column("firstName", String(100), nullable=False)
 
-    last_name: Mapped[str] = mapped_column(
-        "lastName", String(100), nullable=False
-    )
+    last_name: Mapped[str] = mapped_column("lastName", String(100), nullable=False)
 
     email: Mapped[str] = mapped_column(
         "email",
@@ -25,9 +21,7 @@ class Patient(Base):
         index=True,
     )
 
-    phone: Mapped[str | None] = mapped_column(
-        "phone", String(20), nullable=True
-    )
+    phone: Mapped[str | None] = mapped_column("phone", String(20), nullable=True)
 
     created_at: Mapped[DateTime] = mapped_column(
         "createdAt",

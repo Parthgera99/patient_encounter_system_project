@@ -1,13 +1,21 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func
-from sqlalchemy import select, and_
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.patient_encounter_system.models.appointment import Appointment
 from src.patient_encounter_system.models.doctor import Doctor
 from src.patient_encounter_system.schemas.appointment import AppointmentCreate
+
+
+def _to_naive_utc(dt):
+    """
+    Convert aware datetime to naive UTC.
+    Leave naive datetimes unchanged.
+    """
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
 
 
 def _ensure_future(start_time: datetime) -> None:
@@ -24,64 +32,41 @@ def _ensure_doctor_active(db: Session, doctor_id: int) -> None:
         raise ValueError("Doctor is inactive and cannot accept appointments")
 
 
-
-
 def _has_overlap(
     db: Session,
     doctor_id: int,
-    start_time,
+    start_time: datetime,
     duration_minutes: int,
 ) -> bool:
-    # Normalize incoming time to UTC
-    if start_time.tzinfo is None or start_time.utcoffset() is None:
-        start_utc = start_time.replace(tzinfo=timezone.utc)
-    else:
-        start_utc = start_time.astimezone(timezone.utc)
+    # Normalize incoming time
+    start_time = _to_naive_utc(start_time)
+    new_end = start_time + timedelta(minutes=duration_minutes)
 
-    end_utc = start_utc + timedelta(minutes=duration_minutes)
+    stmt = select(Appointment).where(Appointment.doctor_id == doctor_id)
 
-    # Fetch existing appointments for the doctor
-    existing = db.execute(
-        select(Appointment.start_time, Appointment.duration_minutes)
-        .where(Appointment.doctor_id == doctor_id)
-    ).all()
+    existing_appointments = db.execute(stmt).scalars().all()
 
-    for appt_start, appt_duration in existing:
-        # Normalize DB time to UTC
-        if appt_start.tzinfo is None or appt_start.utcoffset() is None:
-            appt_start_utc = appt_start.replace(tzinfo=timezone.utc)
-        else:
-            appt_start_utc = appt_start.astimezone(timezone.utc)
+    for appt in existing_appointments:
+        existing_start = _to_naive_utc(appt.start_time)
+        existing_end = existing_start + timedelta(minutes=appt.duration_minutes)
 
-        appt_end_utc = appt_start_utc + timedelta(minutes=appt_duration)
-
-        # 🔑 Canonical overlap check
-        if start_utc < appt_end_utc and end_utc > appt_start_utc:
+        if existing_start < new_end and existing_end > start_time:
             return True
 
     return False
 
 
-
-
-def create_appointment(
-    db: Session,
-    data: AppointmentCreate,
-) -> Appointment:
-    # 1. Future check
+def create_appointment(db: Session, data: AppointmentCreate) -> Appointment:
     _ensure_future(data.start_time)
-
-    # 2. Doctor active check
     _ensure_doctor_active(db, data.doctor_id)
 
-    # 3. Overlap check
     if _has_overlap(
         db,
         data.doctor_id,
         data.start_time,
         data.duration_minutes,
     ):
-        raise ValueError("Doctor already has an overlapping appointment")
+        raise ValueError("Doctor already has an appointment at this time")
 
     appointment = Appointment(
         patient_id=data.patient_id,
@@ -91,13 +76,6 @@ def create_appointment(
     )
 
     db.add(appointment)
-
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        # Handles duplicate (unique constraint) safely
-        raise ValueError("Duplicate appointment is not allowed")
-
+    db.commit()
     db.refresh(appointment)
     return appointment

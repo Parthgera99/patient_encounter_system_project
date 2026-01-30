@@ -1,17 +1,15 @@
+# ruff: noqa: F401, I001
 import os
-from dotenv import load_dotenv
-
-from src.patient_encounter_system.database import Base
-from src.patient_encounter_system.models.patient import Patient
-from src.patient_encounter_system.models.doctor import Doctor
-from src.patient_encounter_system.models.appointment import Appointment
-
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from src.patient_encounter_system.models import patient, doctor, appointment
+
+
+from dotenv import load_dotenv
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
+from src.patient_encounter_system.database import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -80,9 +78,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

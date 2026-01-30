@@ -15,7 +15,6 @@ def test_create_doctor(client):
     assert data["is_active"] is True
 
 
-
 def test_get_doctor_not_found(client):
     response = client.get("/doctors/999999")
 

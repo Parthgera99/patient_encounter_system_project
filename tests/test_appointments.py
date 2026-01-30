@@ -20,9 +20,7 @@ def test_create_appointment(client):
         },
     ).json()
 
-    start_time = (
-        datetime.now(timezone.utc) + timedelta(hours=2)
-    ).isoformat()
+    start_time = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
 
     response = client.post(
         "/appointments",
@@ -37,30 +35,48 @@ def test_create_appointment(client):
     assert response.status_code == 201
 
 
-def test_duplicate_appointment(client):
-    start_time = (
-        datetime.now(timezone.utc) + timedelta(hours=2)
-    ).isoformat()
+def test_overlapping_appointment(client):
+    # create doctor
+    doctor = client.post(
+        "/doctors",
+        json={"full_name": "Dr Overlap", "specialization": "General"},
+    ).json()
 
-    response = client.post(
+    # create patient
+    patient = client.post(
+        "/patients",
+        json={
+            "first_name": "Overlap",
+            "last_name": "User",
+            "email": f"overlap_{uuid.uuid4()}@example.com",
+            "phone": "7777777777",
+        },
+    ).json()
+
+    base_time = datetime.now(timezone.utc) + timedelta(hours=3)
+
+    # first appointment: 10:00–10:30
+    r1 = client.post(
         "/appointments",
         json={
-            "patient_id": 1,
-            "doctor_id": 1,
-            "start_time": start_time,
+            "patient_id": patient["id"],
+            "doctor_id": doctor["id"],
+            "start_time": base_time.isoformat(),
             "duration_minutes": 30,
         },
     )
 
-    # first one may or may not exist, second must fail
-    response2 = client.post(
+    assert r1.status_code == 201
+
+    # second appointment: 10:15–10:45 (OVERLAPS)
+    r2 = client.post(
         "/appointments",
         json={
-            "patient_id": 1,
-            "doctor_id": 1,
-            "start_time": start_time,
+            "patient_id": patient["id"],
+            "doctor_id": doctor["id"],
+            "start_time": (base_time + timedelta(minutes=15)).isoformat(),
             "duration_minutes": 30,
         },
     )
 
-    assert response2.status_code == 409
+    assert r2.status_code == 409
