@@ -17,6 +17,8 @@ def get_db():
         db.close()
 
 
+
+
 @router.post(
     "",
     response_model=PatientRead,
@@ -28,16 +30,16 @@ def create_patient(data: PatientCreate, db: Session = Depends(get_db)):
 
     try:
         db.commit()
-    except Exception as e:
+    except IntegrityError:
         db.rollback()
         raise HTTPException(
-            status_code=500,
-            detail=str(e),
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Patient with this email already exists",
         )
-
 
     db.refresh(patient)
     return patient
+
 
 
 @router.get(

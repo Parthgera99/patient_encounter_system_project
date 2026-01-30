@@ -24,27 +24,43 @@ def _ensure_doctor_active(db: Session, doctor_id: int) -> None:
         raise ValueError("Doctor is inactive and cannot accept appointments")
 
 
+
+
 def _has_overlap(
     db: Session,
     doctor_id: int,
-    start_time: datetime,
+    start_time,
     duration_minutes: int,
 ) -> bool:
-    end_time = start_time + timedelta(minutes=duration_minutes)
+    # Normalize incoming time to UTC
+    if start_time.tzinfo is None or start_time.utcoffset() is None:
+        start_utc = start_time.replace(tzinfo=timezone.utc)
+    else:
+        start_utc = start_time.astimezone(timezone.utc)
 
-    stmt = (
-        select(Appointment.id)
-        .where(
-            Appointment.doctor_id == doctor_id,
-            Appointment.start_time < end_time,
-            Appointment.start_time
-            + func.interval(Appointment.duration_minutes, "MINUTE")
-            > start_time,
-        )
-        .limit(1)
-    )
+    end_utc = start_utc + timedelta(minutes=duration_minutes)
 
-    return db.execute(stmt).first() is not None
+    # Fetch existing appointments for the doctor
+    existing = db.execute(
+        select(Appointment.start_time, Appointment.duration_minutes)
+        .where(Appointment.doctor_id == doctor_id)
+    ).all()
+
+    for appt_start, appt_duration in existing:
+        # Normalize DB time to UTC
+        if appt_start.tzinfo is None or appt_start.utcoffset() is None:
+            appt_start_utc = appt_start.replace(tzinfo=timezone.utc)
+        else:
+            appt_start_utc = appt_start.astimezone(timezone.utc)
+
+        appt_end_utc = appt_start_utc + timedelta(minutes=appt_duration)
+
+        # 🔑 Canonical overlap check
+        if start_utc < appt_end_utc and end_utc > appt_start_utc:
+            return True
+
+    return False
+
 
 
 

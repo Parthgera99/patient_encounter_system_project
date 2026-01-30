@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from src.patient_encounter_system.models.appointment import Appointment
 from src.patient_encounter_system.database import SessionLocal
 from src.patient_encounter_system.schemas.appointment import (
     AppointmentCreate,
@@ -39,3 +40,24 @@ def schedule_appointment(
             raise HTTPException(status_code=409, detail=message)
 
         raise HTTPException(status_code=400, detail=message)
+    
+
+@router.get(
+    "/{appointment_id}",
+    response_model=AppointmentRead,
+    status_code=status.HTTP_200_OK,
+)
+def get_appointment_by_id(
+    appointment_id: int,
+    db: Session = Depends(get_db),
+):
+    appointment = db.get(Appointment, appointment_id)
+
+    if not appointment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Appointment not found",
+        )
+
+    return appointment
+
