@@ -5,7 +5,7 @@ from src.patient_encounter_system.database import Base
 
 
 class Doctor(Base):
-    __tablename__ = "parthDoctors"
+    __tablename__ = "parthGeraDoctors"
 
     id: Mapped[int] = mapped_column(primary_key=True)
 

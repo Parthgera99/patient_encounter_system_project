@@ -11,17 +11,17 @@ from src.patient_encounter_system.database import Base
 
 
 class Appointment(Base):
-    __tablename__ = "parthAppointments"
+    __tablename__ = "parthGeraAppointments"
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
     patient_id: Mapped[int] = mapped_column(
-        ForeignKey("parthPatients.id", ondelete="RESTRICT"),
+        ForeignKey("parthGeraPatients.id", ondelete="RESTRICT"),
         nullable=False,
     )
 
     doctor_id: Mapped[int] = mapped_column(
-        ForeignKey("parthDoctors.id", ondelete="RESTRICT"),
+        ForeignKey("parthGeraDoctors.id", ondelete="RESTRICT"),
         nullable=False,
     )
 
