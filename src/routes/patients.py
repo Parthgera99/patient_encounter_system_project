@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from src.patient_encounter_system.database import SessionLocal
-from src.patient_encounter_system.models.patient import Patient
-from src.patient_encounter_system.schemas.patient import PatientCreate, PatientRead
+from src.database import SessionLocal
+from src.models.patient import Patient
+from src.schemas.patient import PatientCreate, PatientRead
 
 router = APIRouter(prefix="/patients", tags=["Patients"])
 

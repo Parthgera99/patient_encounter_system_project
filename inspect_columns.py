@@ -1,6 +1,6 @@
 from sqlalchemy import inspect
 
-from src.patient_encounter_system.database import engine
+from src.database import engine
 
 inspector = inspect(engine)
 

@@ -4,13 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
-from src.patient_encounter_system.database import SessionLocal
-from src.patient_encounter_system.models.appointment import Appointment
-from src.patient_encounter_system.schemas.appointment import (
+from src.database import SessionLocal
+from src.models.appointment import Appointment
+from src.schemas.appointment import (
     AppointmentCreate,
     AppointmentRead,
 )
-from src.patient_encounter_system.services.appointment_service import (
+from src.services.appointment_service import (
     create_appointment,
 )
 

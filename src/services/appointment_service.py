@@ -3,9 +3,9 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.patient_encounter_system.models.appointment import Appointment
-from src.patient_encounter_system.models.doctor import Doctor
-from src.patient_encounter_system.schemas.appointment import AppointmentCreate
+from src.models.appointment import Appointment
+from src.models.doctor import Doctor
+from src.schemas.appointment import AppointmentCreate
 
 
 def _to_naive_utc(dt):
@@ -19,7 +19,9 @@ def _to_naive_utc(dt):
 
 
 def _ensure_future(start_time: datetime) -> None:
-    now = datetime.now(timezone.utc)
+    start_time = _to_naive_utc(start_time)
+    now = datetime.utcnow()  # naive UTC
+
     if start_time <= now:
         raise ValueError("Appointment must be scheduled in the future")
 
@@ -57,13 +59,15 @@ def _has_overlap(
 
 
 def create_appointment(db: Session, data: AppointmentCreate) -> Appointment:
-    _ensure_future(data.start_time)
+    start_time = _to_naive_utc(data.start_time)
+
+    _ensure_future(start_time)
     _ensure_doctor_active(db, data.doctor_id)
 
     if _has_overlap(
         db,
         data.doctor_id,
-        data.start_time,
+        start_time,
         data.duration_minutes,
     ):
         raise ValueError("Doctor already has an appointment at this time")
@@ -71,7 +75,7 @@ def create_appointment(db: Session, data: AppointmentCreate) -> Appointment:
     appointment = Appointment(
         patient_id=data.patient_id,
         doctor_id=data.doctor_id,
-        start_time=data.start_time,
+        start_time=start_time,
         duration_minutes=data.duration_minutes,
     )
 

@@ -1,0 +1,33 @@
+# .bandit configuration file
+
+# Directories or files to exclude from scanning
+exclude:
+  - tests
+  - .venv
+  - venv
+  - env
+  - migrations
+
+# Confidence levels to report
+# LOW, MEDIUM, HIGH
+confidence:
+  - LOW
+  - MEDIUM
+  - HIGH
+
+# Severity levels to report
+# LOW, MEDIUM, HIGH
+severity:
+  - LOW
+  - MEDIUM
+  - HIGH
+
+# Optional: skip specific tests (none skipped here)
+# skips:
+#   - B101  # assert_used
+
+# Optional: plugins (default is fine)
+# plugins: []
+
+# Report format defaults
+# (trainer scripts usually rely on defaults)

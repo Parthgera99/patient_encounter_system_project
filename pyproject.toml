@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Medical Encounter Management System"
 authors = ["Parth Gera <parthgera2004@gmail.com>"]
 readme = "README.md"
-packages = [{ include = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"
