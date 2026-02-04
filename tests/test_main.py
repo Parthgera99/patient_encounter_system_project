@@ -1,0 +1,184 @@
+import uuid
+from datetime import datetime, timedelta, timezone
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import text
+
+from src.database import engine
+from src.main import app
+
+# -------------------------------------------------------------------
+# Fixtures (formerly conftest.py)
+# -------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_tables():
+    """
+    Ensure a clean database before the test session starts.
+    """
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM parthGeraAppointments"))
+        conn.execute(text("DELETE FROM parthGeraPatients"))
+        conn.execute(text("DELETE FROM parthGeraDoctors"))
+
+
+@pytest.fixture(scope="session")
+def client():
+    """
+    FastAPI test client shared across tests.
+    """
+    return TestClient(app)
+
+
+# -------------------------------------------------------------------
+# Patient tests
+# -------------------------------------------------------------------
+
+
+def test_create_patient(client):
+    email = f"test_{uuid.uuid4()}@example.com"
+
+    response = client.post(
+        "/patients",
+        json={
+            "first_name": "Test",
+            "last_name": "User",
+            "email": email,
+            "phone": "9999999999",
+        },
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["email"] == email
+
+
+def test_duplicate_patient_email(client):
+    payload = {
+        "first_name": "Test",
+        "last_name": "User",
+        "email": "test_user_001@example.com",
+        "phone": "9999999999",
+    }
+
+    # First creation
+    r1 = client.post("/patients", json=payload)
+    assert r1.status_code == 201
+
+    # Duplicate creation
+    r2 = client.post("/patients", json=payload)
+    assert r2.status_code == 409
+
+
+# -------------------------------------------------------------------
+# Doctor tests
+# -------------------------------------------------------------------
+
+
+def test_create_doctor(client):
+    response = client.post(
+        "/doctors",
+        json={
+            "full_name": "Dr John Doe",
+            "specialization": "Cardiology",
+        },
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+
+    assert data["full_name"] == "Dr John Doe"
+    assert data["specialization"] == "Cardiology"
+    assert data["is_active"] is True
+
+
+def test_get_doctor_not_found(client):
+    response = client.get("/doctors/999999")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Doctor not found"
+
+
+# -------------------------------------------------------------------
+# Appointment tests
+# -------------------------------------------------------------------
+
+
+def test_create_appointment(client):
+    # Create doctor
+    doctor = client.post(
+        "/doctors",
+        json={"full_name": "Dr Test", "specialization": "General"},
+    ).json()
+
+    # Create patient
+    patient = client.post(
+        "/patients",
+        json={
+            "first_name": "Appt",
+            "last_name": "User",
+            "email": f"appt_{uuid.uuid4()}@example.com",
+            "phone": "8888888888",
+        },
+    ).json()
+
+    start_time = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
+
+    response = client.post(
+        "/appointments",
+        json={
+            "patient_id": patient["id"],
+            "doctor_id": doctor["id"],
+            "start_time": start_time,
+            "duration_minutes": 30,
+        },
+    )
+
+    assert response.status_code == 201
+
+
+def test_overlapping_appointment(client):
+    # Create doctor
+    doctor = client.post(
+        "/doctors",
+        json={"full_name": "Dr Overlap", "specialization": "General"},
+    ).json()
+
+    # Create patient
+    patient = client.post(
+        "/patients",
+        json={
+            "first_name": "Overlap",
+            "last_name": "User",
+            "email": f"overlap_{uuid.uuid4()}@example.com",
+            "phone": "7777777777",
+        },
+    ).json()
+
+    base_time = datetime.now(timezone.utc) + timedelta(hours=3)
+
+    # First appointment
+    r1 = client.post(
+        "/appointments",
+        json={
+            "patient_id": patient["id"],
+            "doctor_id": doctor["id"],
+            "start_time": base_time.isoformat(),
+            "duration_minutes": 30,
+        },
+    )
+    assert r1.status_code == 201
+
+    # Overlapping appointment
+    r2 = client.post(
+        "/appointments",
+        json={
+            "patient_id": patient["id"],
+            "doctor_id": doctor["id"],
+            "start_time": (base_time + timedelta(minutes=15)).isoformat(),
+            "duration_minutes": 30,
+        },
+    )
+    assert r2.status_code == 409
