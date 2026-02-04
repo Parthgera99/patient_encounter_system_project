@@ -5,10 +5,7 @@ from src.routes import appointments, doctors, patients
 
 app = FastAPI(title="Medical Encounter Management System")
 
-
-@app.on_event("startup")
-def on_startup():
-    create_tables()
+create_tables()
 
 
 app.include_router(patients.router)
