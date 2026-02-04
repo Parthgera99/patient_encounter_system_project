@@ -190,7 +190,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi.testclient import TestClient
 
-from src.database import Base, engine
+# from src.database import Base, engine
 from src.main import app
 
 # -------------------------------------------------------------------
@@ -198,15 +198,15 @@ from src.main import app
 # -------------------------------------------------------------------
 
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_database():
-    """
-    Create all tables for SQLite before tests.
-    Drop them after the test session.
-    """
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
+# @pytest.fixture(scope="session", autouse=True)
+# def setup_database():
+#     """
+#     Create all tables for SQLite before tests.
+#     Drop them after the test session.
+#     """
+#     Base.metadata.create_all(bind=engine)
+#     yield
+#     Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture
@@ -240,10 +240,12 @@ def test_create_patient(client):
 
 
 def test_duplicate_patient_email(client):
+    unique_email = f"test_{uuid.uuid4()}@example.com"
+
     payload = {
         "first_name": "Test",
         "last_name": "User",
-        "email": "test_user_001@example.com",
+        "email": unique_email,
         "phone": "9999999999",
     }
 
